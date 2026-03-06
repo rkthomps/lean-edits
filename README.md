@@ -1,17 +1,13 @@
-# lean-edits README
+![LeanEdits Logo](figures/logo.svg)
 
-This extension collects fine-grained programming data while using the Lean Theorem Prover. 
+## Description
+LeanEdits is a dataset of fine-grained theorem-proving data from contributing Lean experts. 
+It's purpose is both to better understand how experts use Lean on a day-to-day basis, and to provide a rich source of data for machine-learning based approaches to proof automation. 
 
-For additional information or if you have trouble, please contact Kyle Thompson (r7thompson@ucsd.edu) 
 
-## Extension Purpose
-This extension exists for facilitating research on proof engineering, and to collect data that can be used
-to create better tools for proof engineering. 
-
-There is extensive data contained in version control repositories that shows the history of theorem proving projects. 
-Unfortunately, the data in these repositories is coarse grained in the sense that they normally only capture work 
-at the level of "commits".
-By capturing key-stroke level programming data, we will have data that fully documents the theorem proving process. 
+## LeanEdits Extension 
+The repository is home to the LeanEdits VS Code extension. 
+This extension collects edits made to `*.lean` source files by logging events sent to the Lean language server. From these events, the extension captures enough information to recreate every version of the users Lean project. 
 
 
 ## Participation
@@ -20,7 +16,7 @@ You can complete the consent form [here](https://docs.google.com/forms/d/e/1FAIp
 
 
 ## Usage
-Using the `lean-vacuum` extension is simple. Once you have completed the consent form and installed the extension, it will prompt
+Using the LeanEdits extension is simple. Once you have completed the consent form and installed the extension, it will prompt
 you to enter the same name you entered on the consent form. This is so that we can ensure we are only using the data from
 people who have provided consent. 
 
@@ -33,7 +29,7 @@ Since the changes are uploaded to the cloud at regular intervals, **it is always
 
 For your convenience, the extension will prompt you to create a global `.gitignore_global` file to ignore this directory across your file system. 
 
-### Enabling/Disabling `lean-vacuum`
+### Enabling/Disabling LeanEdits 
 You can very easily enable/disable the extension by clicking on the "Lean Vacuum: ON/OFF" status bar item in the lower left-hand
 corner of your editor.
 

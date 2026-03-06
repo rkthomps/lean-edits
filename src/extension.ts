@@ -17,7 +17,7 @@ import { ignoreChanges } from "./gitUtils";
 
 import { upload } from "./upload";
 
-import { VacuumConfig, load_config } from "./config";
+import { LeanEditsConfig, load_config } from "./config";
 
 import { EXTENSION_NAME, CONSENT_URL, extensionLog } from "./common";
 import { readFileSync } from "fs";
@@ -33,13 +33,13 @@ function createStatusBar(): vscode.StatusBarItem {
 }
 
 
-class VacuumController {
+class LeanEditsController {
   private updateCheckpointTimer: NodeJS.Timeout | null;
   private uploadTimer: NodeJS.Timeout | null;
-  private config: VacuumConfig;
+  private config: LeanEditsConfig;
   private statusBarItem: vscode.StatusBarItem;
 
-  constructor(config: VacuumConfig) {
+  constructor(config: LeanEditsConfig) {
     this.updateCheckpointTimer = null;
     this.uploadTimer = null;
     this.config = config;
@@ -53,18 +53,18 @@ class VacuumController {
 
   renderStatusBar() {
     if (this.config.enabled) {
-      this.statusBarItem.text = `Lean Vacuum: ON`;
+      this.statusBarItem.text = `LeanEdits: ON`;
     } else {
-      this.statusBarItem.text = `Lean Vacuum: OFF`;
+      this.statusBarItem.text = `LeanEdits: OFF`;
     }
     this.statusBarItem.show();
   }
 
-  getConfig(): VacuumConfig {
+  getConfig(): LeanEditsConfig {
     return this.config;
   }
 
-  updateConfig(config: VacuumConfig) {
+  updateConfig(config: LeanEditsConfig) {
     this.config = config;
   }
 
@@ -119,7 +119,7 @@ function showConsentUrl() {
   const openForm = "Open Consent Form";
   const completeForm = "I have completed the form";
   vscode.window.showWarningMessage(
-    "Please ensure you've completed the Lean Vacuum Consent Form before using the extension.",
+    "Please ensure you've completed the LeanEdits Consent Form before using the extension.",
     { modal: true },
     openForm,
     completeForm
@@ -135,7 +135,7 @@ function showConsentUrl() {
 
 async function askForName(): Promise<string | undefined> {
   const name = await vscode.window.showInputBox({
-    title: "Lean Vacuum",
+    title: "LeanEdits",
     prompt: "Enter your name (as written on the consent form)",
     placeHolder: "Your name",
     ignoreFocusOut: true, // keeps the box open if the user clicks outside
@@ -150,12 +150,12 @@ async function askForName(): Promise<string | undefined> {
   return name; // undefined if user cancels
 }
 
-let controller: VacuumController | undefined = undefined;
+let controller: LeanEditsController | undefined = undefined;
 
 
-function getController(): VacuumController {
+function getController(): LeanEditsController {
   if (controller === undefined) {
-    controller = new VacuumController(load_config());
+    controller = new LeanEditsController(load_config());
   }
   return controller;
 }
@@ -179,10 +179,10 @@ const CHECKPOINT_TIME_MS = 3 * 1000;
 
 export async function activate(context: vscode.ExtensionContext) {
   // Right now no need for the config
-  console.log("[lean-vacuum] activated");
+  console.log("[lean-edits] activated");
   const controller = getController();
-  console.log(`[lean-vacuum] effectively enabled: ${controller.effectivelyEnabled()}`);
-  console.log(`[lean-vacuum] participant name: ${controller.getConfig().participantName}`);
+  console.log(`[lean-edits] effectively enabled: ${controller.effectivelyEnabled()}`);
+  console.log(`[lean-edits] participant name: ${controller.getConfig().participantName}`);
 
   // Show consent command
   const showConsentCommand = vscode.commands.registerCommand(`${EXTENSION_NAME}.showConsentUrl`, () => {
@@ -207,7 +207,7 @@ export async function activate(context: vscode.ExtensionContext) {
     controller.updateConfig(load_config());
     controller.renderStatusBar();
     vscode.window.showInformationMessage(
-      `Lean Vacuum ${!enabled ? "enabled" : "disabled"}`
+      `LeanEdits ${!enabled ? "enabled" : "disabled"}`
     );
   });
   context.subscriptions.push(toggleEnabledCommand);
@@ -237,7 +237,7 @@ export async function activate(context: vscode.ExtensionContext) {
         const participantName = controller.getConfig().participantName!;
         return updateConcreteCheckpoints(wsPath, controller.getConfig(), participantName);
       });
-      console.log(`[lean-vacuum] initial concrete checkpoint update in ${time}ms`);
+      console.log(`[lean-edits] initial concrete checkpoint update in ${time}ms`);
     }
   }
 
@@ -258,14 +258,14 @@ export async function activate(context: vscode.ExtensionContext) {
       const participantName = controller.getConfig().participantName!;
       return logChange(e, config, participantName);
     });
-    // console.log(`[lean-vacuum] logged change in ${time}ms`);
+    // console.log(`[lean-edits] logged change in ${time}ms`);
   });
   context.subscriptions.push(changeHook);
 
 
   // On configuration change events
   const configHook = workspace.onDidChangeConfiguration((e) => {
-    if (e.affectsConfiguration("lean-vacuum")) {
+    if (e.affectsConfiguration("lean-edits")) {
       const config = load_config();
       getController().updateConfig(config);
     }

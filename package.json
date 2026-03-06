@@ -1,12 +1,13 @@
 {
-  "name": "lean-vacuum",
-  "displayName": "lean-vacuum",
+  "name": "lean-edits",
+  "displayName": "LeanEdits",
   "publisher": "KyleThompson",
-  "description": "",
-  "version": "1.1.2",
+  "description": "An extension that collects fine-grained edit data from users of Lean4.",
+  "version": "0.0.1",
+  "icon": "figures/logo.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rkthomps/lean-vacuum"
+    "url": "https://github.com/rkthomps/lean-edits"
   },
   "engines": {
     "vscode": "^1.104.0"
@@ -23,28 +24,28 @@
   "contributes": {
     "commands": [
       {
-        "command": "lean-vacuum.showConsentUrl",
-        "title": "[Lean Vacuum]: Show Consent Form URL"
+        "command": "lean-edits.showConsentUrl",
+        "title": "[LeanEdits]: Show Consent Form URL"
       },
       {
-        "command": "lean-vacuum.uploadChanges",
-        "title": "[Lean Vacuum]: Upload Changes"
+        "command": "lean-edits.uploadChanges",
+        "title": "[LeanEdits]: Upload Changes"
       }
     ],
     "configuration": {
-      "title": "Lean Vacuum",
+      "title": "LeanEdits Configuration",
       "properties": {
-        "lean-vacuum.participantName": {
+        "lean-edits.participantName": {
           "title": "Participant Name",
           "type": "string",
           "description": "Name that you wrote on the consent form. Please complete the consent form if you haven't already."
         },
-        "lean-vacuum.enabled": {
+        "lean-edits.enabled": {
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "title": "Enable Lean Vacuum",
-          "description": "Enable or disable the Lean Vacuum extension globally."
+          "title": "Enable LeanEdits",
+          "description": "Enable or disable the LeanEdits extension globally."
         }
       }
     }

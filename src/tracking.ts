@@ -1,7 +1,7 @@
 import fs = require("fs");
 import path = require("path");
 import os = require("os");
-import { VacuumConfig } from "./config";
+import { LeanEditsConfig } from "./config";
 
 import { Edit, NewContentConcreteCheckpoint } from "./types";
 
@@ -71,7 +71,7 @@ function workingTreeFiles(wsPath: string, repo: any): string[] {
 }
 
 export function getBaseCommit(wsPath: string, consentName: string): [BaseCommit, string[] | null] {
-  // console.log(`[lean-vacuum] getting git extension for workspace: ${wsPath}`);
+  // console.log(`[lean-edits] getting git extension for workspace: ${wsPath}`);
   const gitExtension = extensions.getExtension("vscode.git")?.exports;
   const localState = getLocalState(wsPath, consentName);
   if (!gitExtension) {
@@ -121,7 +121,7 @@ export function getBaseCommit(wsPath: string, consentName: string): [BaseCommit,
 /**
  * Defines whether a directory is essential for tracking.
  */
-function isEssentialDir(dir: string, config: VacuumConfig): boolean {
+function isEssentialDir(dir: string, config: LeanEditsConfig): boolean {
   const notLakeDir = !dir.endsWith(".lake");
   const notGitDir = !dir.endsWith(".git");
   const notChangesDir = !dir.endsWith(CHANGES_NAME);
@@ -131,7 +131,7 @@ function isEssentialDir(dir: string, config: VacuumConfig): boolean {
 /**
  * Defines whether a file is essential for tracking.
  */
-function isEssentialFile(file: string, config: VacuumConfig): boolean {
+function isEssentialFile(file: string, config: LeanEditsConfig): boolean {
   const isLakeFileLean = path.basename(file) === "lakefile.lean";
   const isLakeFileToml = path.basename(file) === "lakefile.toml";
   const isLeanToolChain = path.basename(file) === "lean-toolchain";
@@ -227,7 +227,7 @@ export interface TrackedFileResult {
  */
 export function getTrackedFiles(
   wsPath: string,
-  config: VacuumConfig,
+  config: LeanEditsConfig,
   consentName: string
 ): TrackedFileResult {
   const [baseCommit, modifiedFiles] = getBaseCommit(wsPath, consentName);
@@ -235,7 +235,7 @@ export function getTrackedFiles(
   let filesToTrack: string[] = [];
   if (modifiedFiles !== null) {
     filesToTrack = modifiedFiles.filter((f) => isEssentialFile(f, config));
-    console.log(`[lean-vacuum] tracked files in workspace: ${wsPath}: ${filesToTrack.length}`);
+    console.log(`[lean-edits] tracked files in workspace: ${wsPath}: ${filesToTrack.length}`);
     return {
       files: filesToTrack,
       baseCommit,
@@ -302,7 +302,7 @@ function getConcreteCheckpointDir(wsPath: string, baseCommit: BaseCommit, filePa
 function updateConcreteCheckpoint(
   wsPath: string,
   filePath: string,
-  config: VacuumConfig,
+  config: LeanEditsConfig,
   baseCommit: BaseCommit,
 ): void {
   const fileStat = fs.lstatSync(filePath);
@@ -341,10 +341,10 @@ function saveMetadata(wsPath: string, metadata: BaseCommit): void {
  */
 export function updateConcreteCheckpoints(
   wsPath: string,
-  config: VacuumConfig,
+  config: LeanEditsConfig,
   consentName: string
 ): void {
-  console.log(`[lean-vacuum] updating concrete checkpoints for workspace: ${wsPath}`);
+  console.log(`[lean-edits] updating concrete checkpoints for workspace: ${wsPath}`);
   const { files, baseCommit } = getTrackedFiles(wsPath, config, consentName);
   for (const filePath of files) {
     updateConcreteCheckpoint(wsPath, filePath, config, baseCommit);
@@ -360,7 +360,7 @@ export function updateConcreteCheckpoints(
  */
 export function logChange(
   change: TextDocumentChangeEvent,
-  config: VacuumConfig,
+  config: LeanEditsConfig,
   consentName: string
 ): void {
   const wsPath = getWorkspacePath(change.document);
