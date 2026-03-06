@@ -1,4 +1,4 @@
-![LeanEdits Logo](figures/logo.svg)
+![LeanEdits Logo](figures/logo.png)
 
 ## Description
 LeanEdits is a dataset of fine-grained theorem-proving data from contributing Lean experts. 
