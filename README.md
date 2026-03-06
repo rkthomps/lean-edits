@@ -35,6 +35,14 @@ corner of your editor.
 
 ![Enable/Disable Extension](figures/click-enable.png)
 
+## What does LeanEdits Collect?
+LeanEdits logs `didChange` LSP events on Lean files (including `lakefile.toml` and `lean-toolchain`). This event fires every time a change is made in the editor. This level of granularity allows us to recreate every state of a user's Lean project while using VS Code.  
+
+## Where is the Data Stored? 
+The data is stored locally in a `.changes` directory for each project. Periodically, the extension uploads the data to a private AWS S3 bucket. Access to this raw data will be tightly protected and only granted to those immediately responsible for data collection. 
+
+## Who will have Access to the Data?
+Before using the data for research, we will ensure the data comes from a public GitHub repository with a permissive license. We will also run Gitleaks and Microsoft Presidio to ensure the data has no potentially sensitive information. For data that is permitted to use for research, only researchers with approval from their IRB review board, or institutional equivalent will be granted access to LeanEdits. 
 
 ## Risks
 **Inclusion of Sensitive Information**: If you type sensitive information into a source code file while programming, and the sensitive information isn't flagged by our secret scanners (namely GitLeaks and Microsoft Presidio), the sensitive information could end up in our dataset.
