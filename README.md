@@ -11,8 +11,9 @@ This extension collects edits made to `*.lean` source files by logging events se
 
 
 ## Participation
-Before your data can be used for research purposes, you must complete the consent form for the study. 
-You can complete the consent form [here](https://docs.google.com/forms/d/e/1FAIpQLSfkzrajoQ7KY7BnlP96nrHPpv0r2zAk80SNunL4p-l_saKKQg/viewform?usp=header).
+**Participation is easy!** It only requires two steps:
+- Complete the [study consent form](https://docs.google.com/forms/d/e/1FAIpQLSfkzrajoQ7KY7BnlP96nrHPpv0r2zAk80SNunL4p-l_saKKQg/viewform?usp=header).
+- Install the [LeanEdits extension](https://marketplace.visualstudio.com/items?itemName=KyleThompson.lean-edits).
 
 
 ## Usage
