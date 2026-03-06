@@ -1,4 +1,4 @@
-# lean-vacuum README
+# lean-edits README
 
 This extension collects fine-grained programming data while using the Lean Theorem Prover. 
 
