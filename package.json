@@ -3,7 +3,7 @@
   "displayName": "LeanEdits",
   "publisher": "KyleThompson",
   "description": "An extension that collects fine-grained edit data from users of Lean4.",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "icon": "figures/logo.png",
   "repository": {
     "type": "git",
