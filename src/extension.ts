@@ -153,7 +153,7 @@ async function askForName(): Promise<string | undefined> {
 let controller: LeanEditsController | undefined = undefined;
 
 
-function getController(): LeanEditsController {
+export function getController(): LeanEditsController {
   if (controller === undefined) {
     controller = new LeanEditsController(load_config());
   }
@@ -271,6 +271,19 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   });
   context.subscriptions.push(configHook);
+
+  // Sync Checkpoints Command
+  const syncCheckpointsCommand = vscode.commands.registerCommand(`${EXTENSION_NAME}.syncCheckpoints`, async () => {
+    let wsFolders = workspace.workspaceFolders;
+    if (!wsFolders || wsFolders.length === 0) {
+      return;
+    }
+    for (let ws of wsFolders) {
+      const participantName = getController().getConfig().participantName!;
+      updateConcreteCheckpoints(ws.uri.fsPath, getController().getConfig(), participantName);
+    }
+  });
+  context.subscriptions.push(syncCheckpointsCommand);
 
   // Upload Command
   const uploadCommand = vscode.commands.registerCommand(`${EXTENSION_NAME}.uploadChanges`, async () => {

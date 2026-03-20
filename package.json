@@ -30,6 +30,10 @@
       {
         "command": "lean-edits.uploadChanges",
         "title": "[LeanEdits]: Upload Changes"
+      },
+      {
+        "command": "lean-edits.syncCheckpoints",
+        "title": "[LeanEdits]: Sync Checkpoints"
       }
     ],
     "configuration": {
