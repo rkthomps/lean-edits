@@ -339,6 +339,44 @@ function saveMetadata(wsPath: string, metadata: BaseCommit): void {
  * This ensures that we can reproduce the state of the workspace when we  
  * want to replay an edit.
  */
+const KEEP_N_COMMIT_DIRS = 2;
+
+/**
+ * Uploads and deletes old commit directories under .changes/, keeping only
+ * the N most recent by metadata.json mtime. Skips the no-git directory.
+ */
+export async function cleanupOldCommitDirs(
+  wsPath: string,
+  uploadFn: (changesPath: string) => Promise<void>
+): Promise<void> {
+  const changesRoot = path.join(wsPath, CHANGES_NAME);
+  if (!fs.existsSync(changesRoot)) {
+    return;
+  }
+  const entries = fs.readdirSync(changesRoot, { withFileTypes: true })
+    .filter(e => e.isDirectory() && e.name !== "no-git")
+    .map(e => {
+      const fullPath = path.join(changesRoot, e.name);
+      const metadataPath = path.join(fullPath, "metadata.json");
+      const mtime = fs.existsSync(metadataPath)
+        ? fs.statSync(metadataPath).mtimeMs
+        : fs.statSync(fullPath).mtimeMs;
+      return { fullPath, mtime };
+    })
+    .sort((a, b) => b.mtime - a.mtime); // newest first
+
+  const toDelete = entries.slice(KEEP_N_COMMIT_DIRS);
+  for (const { fullPath } of toDelete) {
+    try {
+      await uploadFn(fullPath);
+    } catch (e) {
+      console.error(`[lean-edits] upload failed before cleanup of ${fullPath}:`, e);
+    }
+    fs.rmSync(fullPath, { recursive: true });
+    console.log(`[lean-edits] cleaned up old commit dir: ${fullPath}`);
+  }
+}
+
 export function updateConcreteCheckpoints(
   wsPath: string,
   config: LeanEditsConfig,

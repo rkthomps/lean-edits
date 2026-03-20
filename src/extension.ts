@@ -8,6 +8,7 @@ import path from "path";
 import {
   logChange,
   updateConcreteCheckpoints,
+  cleanupOldCommitDirs,
   getWorkspacePath,
   getBaseCommit,
   getChangesDir
@@ -231,7 +232,7 @@ export async function activate(context: vscode.ExtensionContext) {
     controller.updateConfig(load_config());
   }
 
-  // Initial checkpoint update
+  // Initial checkpoint update and cleanup
   if (controller.effectivelyEnabled()) {
     for (let ws of workspace.workspaceFolders ?? []) {
       let wsPath = ws.uri.fsPath;
@@ -240,6 +241,7 @@ export async function activate(context: vscode.ExtensionContext) {
         return updateConcreteCheckpoints(wsPath, controller.getConfig(), participantName);
       });
       console.log(`[lean-edits] initial concrete checkpoint update in ${time}ms`);
+      await cleanupOldCommitDirs(wsPath, upload);
     }
   }
 
