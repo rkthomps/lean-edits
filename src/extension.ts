@@ -14,6 +14,7 @@ import {
 } from "./tracking";
 
 import { ignoreChanges } from "./gitUtils";
+import { excludeChangesFromVscode } from "./vscodeUtils";
 
 import { upload } from "./upload";
 
@@ -190,8 +191,9 @@ export async function activate(context: vscode.ExtensionContext) {
   });
   context.subscriptions.push(showConsentCommand);
 
-  // Ignore .changes directory in global gitignore
+  // Ignore .changes directory in global gitignore and VSCode file search
   ignoreChanges();
+  excludeChangesFromVscode();
 
   // Toggle enabled/disabled command 
   const toggleEnabledCommand = vscode.commands.registerCommand(`${EXTENSION_NAME}.toggleEnabled`, async () => {
