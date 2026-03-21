@@ -7,24 +7,16 @@ import { getController } from '../extension';
 import { CONCRETE_NAME, EDITS_NAME } from '../tracking';
 
 /**
- * Writes a .vscode/settings.json for the given workspace with the provided
- * LeanEdits config, and updates the live controller so VSCode picks it up
- * immediately without waiting for a config-change event.
+ * Restores a file's content both in VSCode's in-memory document and on disk.
  */
-export async function setConfig(wsPath: string, config: LeanEditsConfig): Promise<void> {
-    const vscodeDir = path.join(wsPath, '.vscode');
-    if (!fs.existsSync(vscodeDir)) {
-        fs.mkdirSync(vscodeDir);
-    }
-    const settings = {
-        'lean-edits.participantName': config.participantName,
-        'lean-edits.enabled': config.enabled,
-    };
-    fs.writeFileSync(path.join(vscodeDir, 'settings.json'), JSON.stringify(settings, null, 2));
-
-    const ext = vscode.extensions.getExtension('KyleThompson.lean-edits');
-    await ext?.activate();
-    getController().updateConfig(config);
+export async function restoreFile(filePath: string, content: string): Promise<void> {
+    const uri = vscode.Uri.file(filePath);
+    const doc = await vscode.workspace.openTextDocument(uri);
+    const fullRange = new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length));
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(uri, fullRange, content);
+    await vscode.workspace.applyEdit(edit);
+    await doc.save();
 }
 
 // --- Replay Logic ---

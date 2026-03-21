@@ -50,6 +50,12 @@
           "scope": "application",
           "title": "Enable LeanEdits",
           "description": "Enable or disable the LeanEdits extension globally."
+        },
+        "lean-edits.publicRepoOnly": {
+          "type": "boolean",
+          "default": true,
+          "title": "Public Repo Only",
+          "description": "Only record edits when the origin remote is a public GitHub repository."
         }
       }
     }

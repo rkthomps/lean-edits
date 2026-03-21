@@ -1,4 +1,5 @@
 {
   "lean-edits.participantName": "test-user",
-  "lean-edits.enabled": true
+  "lean-edits.enabled": true,
+  "lean-edits.publicRepoOnly": false,
 }

@@ -3,8 +3,9 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { setConfig, replayFileAtTime, getWorkspaceStateAfterEdit } from './helpers';
+import { replayFileAtTime, getWorkspaceStateAfterEdit, restoreFile } from './helpers';
 import { CHANGES_NAME, CONCRETE_NAME, EDITS_NAME } from '../tracking';
+import { getController } from '../extension';
 
 suite('Smoke Test', () => {
     const wsPath = vscode.workspace.workspaceFolders![0].uri.fsPath;
@@ -15,14 +16,14 @@ suite('Smoke Test', () => {
 
     setup(async () => {
         originalContent = fs.readFileSync(mainLeanPath, 'utf-8');
-        await setConfig(wsPath, { participantName: 'test-user', enabled: true });
+        getController().setOriginPublic(true);
         if (fs.existsSync(changesDir)) {
             fs.rmSync(changesDir, { recursive: true });
         }
     });
 
-    teardown(() => {
-        fs.writeFileSync(mainLeanPath, originalContent);
+    teardown(async () => {
+        await restoreFile(mainLeanPath, originalContent);
         if (fs.existsSync(changesDir)) {
             fs.rmSync(changesDir, { recursive: true });
         }
@@ -35,6 +36,7 @@ suite('Smoke Test', () => {
 
         // Capture baseline concrete checkpoint before making any edits
         await vscode.commands.executeCommand('lean-edits.syncCheckpoints');
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         // Make some edits
         const edit = new vscode.WorkspaceEdit();
@@ -80,15 +82,15 @@ suite('Replay Test', () => {
     setup(async () => {
         originalF1 = fs.readFileSync(f1Path, 'utf-8');
         originalF2 = fs.readFileSync(f2Path, 'utf-8');
-        await setConfig(wsPath, { participantName: 'test-user', enabled: true });
+        getController().setOriginPublic(true);
         if (fs.existsSync(changesDir)) {
             fs.rmSync(changesDir, { recursive: true });
         }
     });
 
-    teardown(() => {
-        fs.writeFileSync(f1Path, originalF1);
-        fs.writeFileSync(f2Path, originalF2);
+    teardown(async () => {
+        await restoreFile(f1Path, originalF1);
+        await restoreFile(f2Path, originalF2);
         if (fs.existsSync(changesDir)) {
             fs.rmSync(changesDir, { recursive: true });
         }
@@ -105,6 +107,8 @@ suite('Replay Test', () => {
 
         // Capture baseline concrete checkpoints before any edits
         await vscode.commands.executeCommand('lean-edits.syncCheckpoints');
+        // Wait for syncCheckpoints to finish writing checkpoints to disk 
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         // --- Batch 1 ---
         const e1f1 = new vscode.WorkspaceEdit();
@@ -141,6 +145,7 @@ suite('Replay Test', () => {
         const commitDirs = fs.readdirSync(changesDir);
         assert.ok(commitDirs.length > 0);
         const commitDir = path.join(changesDir, commitDirs[0]);
+        // Edits dir for f2 should have at least 2 edits
 
         // The expected final contents (what VSCode has in memory)
         const expectedF1 = doc1.getText();
@@ -154,15 +159,18 @@ suite('Replay Test', () => {
         const f1EditCount = fs.readdirSync(f1EditsDir).length;
         const f2EditCount = fs.readdirSync(f2EditsDir).length;
 
+        console.log(`f1 edit count: ${f1EditCount}, f2 edit count: ${f2EditCount}`);
+
+        // At the time of the last edit to f2, all f1 edits should be visible
+        assert.ok(f1EditCount === 2, `f1 should have 2 edits, got ${f1EditCount}`);
+        assert.ok(f2EditCount === 2, `f2 should have 2 edits, got ${f2EditCount}`);
+
         const replayedF1Final = replayFileAtTime(f1FileDir, Date.now());
         const replayedF2Final = replayFileAtTime(f2FileDir, Date.now());
 
         assert.strictEqual(replayedF1Final, expectedF1, 'replayed f1 should match actual f1 content');
         assert.strictEqual(replayedF2Final, expectedF2, 'replayed f2 should match actual f2 content');
 
-        // At the time of the last edit to f2, all f1 edits should be visible
-        assert.ok(f1EditCount >= 2, `f1 should have at least 2 edits, got ${f1EditCount}`);
-        assert.ok(f2EditCount >= 2, `f2 should have at least 2 edits, got ${f2EditCount}`);
 
         const stateAtLastF2Edit = getWorkspaceStateAfterEdit(commitDir, f2Rel, f2EditCount - 1);
         const f1AtLastF2Edit = stateAtLastF2Edit.get(f1Rel)!;
