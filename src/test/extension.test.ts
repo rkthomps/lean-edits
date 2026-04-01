@@ -3,7 +3,7 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { replayFileAtTime, getWorkspaceStateAfterEdit, restoreFile } from './helpers';
+import { replayFileAtTime, getWorkspaceStateAfterEdit, restoreFile, displayEdit } from './helpers';
 import { CHANGES_NAME, CONCRETE_NAME, EDITS_NAME } from '../tracking';
 import { getController } from '../extension';
 
@@ -159,11 +159,9 @@ suite('Replay Test', () => {
         const f1EditCount = fs.readdirSync(f1EditsDir).length;
         const f2EditCount = fs.readdirSync(f2EditsDir).length;
 
-        console.log(`f1 edit count: ${f1EditCount}, f2 edit count: ${f2EditCount}`);
 
-        // At the time of the last edit to f2, all f1 edits should be visible
-        assert.ok(f1EditCount === 2, `f1 should have 2 edits, got ${f1EditCount}`);
-        assert.ok(f2EditCount === 2, `f2 should have 2 edits, got ${f2EditCount}`);
+        assert.strictEqual(f1EditCount, 2, 'f1 should have 2 edits');
+        assert.strictEqual(f2EditCount, 2, 'f2 should have 2 edits');
 
         const replayedF1Final = replayFileAtTime(f1FileDir, Date.now());
         const replayedF2Final = replayFileAtTime(f2FileDir, Date.now());

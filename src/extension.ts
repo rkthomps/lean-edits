@@ -270,6 +270,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // On change events
   const changeHook = workspace.onDidChangeTextDocument(async (e) => {
+    if (e.contentChanges.length === 0) {
+      return; // VsCode fires changes with 0 length. We should not record these.
+    }
     let wsPath = getWorkspacePath(e.document);
     let controller = getController();
     if (wsPath === undefined) {

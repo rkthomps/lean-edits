@@ -105,6 +105,21 @@ function findFileDirectories(dir: string, commitDir: string): string[] {
 }
 
 /**
+ * Returns a human-readable string describing a stored edit.
+ */
+export function displayEdit(edit: StoredEdit): string {
+    const time = new Date(edit.time).toISOString();
+    if (edit.changes.length === 0) {
+        return `[${time}] (no content changes)`;
+    }
+    const changeLines = edit.changes.map(c => {
+        const preview = JSON.stringify(c.text.slice(0, 40)) + (c.text.length > 40 ? '...' : '');
+        return `    offset=${c.rangeOffset} len=${c.rangeLength} text=${preview}`;
+    });
+    return `[${time}]\n${changeLines.join('\n')}`;
+}
+
+/**
  * Replays the edit history of a file up to (and including) a given time.
  *
  * fileDir: the tracking directory for a specific file within the commit dir,
