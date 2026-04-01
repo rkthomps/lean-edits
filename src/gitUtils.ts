@@ -126,8 +126,8 @@ function checkGitHubRepoPublic(ownerRepo: string): Promise<boolean> {
  * Returns false if there is no git repo, no origin remote, the remote is not GitHub,
  * or the repo is private/unreachable.
  */
-export async function isOriginPublic(wsPath: string, consentName: string): Promise<boolean> {
-    const [baseCommit] = getBaseCommit(wsPath, consentName);
+export async function isOriginPublic(wsPath: string): Promise<boolean> {
+    const [baseCommit] = getBaseCommit(wsPath, "foo-bar");
     if (baseCommit.type !== "git") { return false; }
     const origin = baseCommit.remotes.find(r => r.name === "origin");
     if (!origin) { return false; }

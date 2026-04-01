@@ -60,8 +60,13 @@ class LeanEditsController {
   renderStatusBar() {
     if (this.effectivelyEnabled()) {
       this.statusBarItem.text = `LeanEdits: ON`;
+    } else if (this.config.enabled && !this.nameNonempty()) {
+      this.statusBarItem.text = `LeanEdits: OFF (Name Required)`;
+    } else if (this.config.enabled && this.config.publicRepoOnly && !this.originPublic) {
+      this.statusBarItem.text = `LeanEdits: OFF (Private Workspace)`;
     } else {
-      this.statusBarItem.text = `LeanEdits: OFF`;
+      assert(!this.config.enabled)
+      this.statusBarItem.text = `LeanEdits: OFF (Disabled)`;
     }
     this.statusBarItem.show();
   }
@@ -83,9 +88,23 @@ class LeanEditsController {
     return this.config.participantName !== undefined && this.config.participantName.trim() !== "";
   }
 
-  effectivelyEnabled(): boolean {
+  cantBeEnabledReason(): string | null {
+    if (!this.nameNonempty()) {
+      return "Name is required";
+    }
+    if (this.config.publicRepoOnly && !this.originPublic) {
+      return "Workspace is private";
+    }
+    return null;
+  }
+
+  canBeEnabled(): boolean {
     const publicRepoOk = !this.config.publicRepoOnly || this.originPublic;
-    return this.config.enabled && this.nameNonempty() && publicRepoOk;
+    return this.nameNonempty() && publicRepoOk;
+  }
+
+  effectivelyEnabled(): boolean {
+    return this.config.enabled && this.canBeEnabled();
   }
 
   setUploadTimer(wsPath: string) {
@@ -209,19 +228,32 @@ export async function activate(context: vscode.ExtensionContext) {
   // Toggle enabled/disabled command 
   const toggleEnabledCommand = vscode.commands.registerCommand(`${EXTENSION_NAME}.toggleEnabled`, async () => {
     const config = vscode.workspace.getConfiguration(EXTENSION_NAME);
-    const enabled = config.get<boolean>("enabled", true);
-    await config.update(
-      "enabled",
-      !enabled,
-      vscode.ConfigurationTarget.Global
-    );
-
     const controller = getController();
+    if (controller.canBeEnabled()) {
+      const enabled = config.get<boolean>("enabled", true);
+      await config.update(
+        "enabled",
+        !enabled,
+        vscode.ConfigurationTarget.Global
+      );
+
+      vscode.window.showInformationMessage(
+        `LeanEdits ${!enabled ? "enabled" : "disabled"}`
+      );
+    } else {
+      if (!config.get<boolean>("enabled", true)) {
+        await config.update(
+          "enabled",
+          true,
+          vscode.ConfigurationTarget.Global
+        );
+      }
+      vscode.window.showWarningMessage(
+        `Cannot enable LeanEdits: ${controller.cantBeEnabledReason()}`
+      )
+    }
     controller.updateConfig(load_config());
     controller.renderStatusBar();
-    vscode.window.showInformationMessage(
-      `LeanEdits ${!enabled ? "enabled" : "disabled"}`
-    );
   });
   context.subscriptions.push(toggleEnabledCommand);
 
@@ -240,19 +272,51 @@ export async function activate(context: vscode.ExtensionContext) {
       vscode.ConfigurationTarget.Global
     );
     controller.updateConfig(load_config());
+    controller.renderStatusBar();
   }
 
-  // Check if repo is public
-  let participantName = controller.getConfig().participantName;
-  if (participantName) {
+  // Check if repo is public, accounting for the Git extension loading repos asynchronously
+  const checkOriginPublic = async () => {
     let allPublic = true;
     for (let ws of workspace.workspaceFolders ?? []) {
-      let wsPath = ws.uri.fsPath;
-      const isPublic = await isOriginPublic(wsPath, participantName);
+      const isPublic = await isOriginPublic(ws.uri.fsPath);
       allPublic = allPublic && isPublic;
     }
     controller.setOriginPublic(allPublic);
+  };
+
+  const gitExtension = vscode.extensions.getExtension('vscode.git')?.exports;
+  if (gitExtension) {
+    const api = gitExtension.getAPI(1);
+
+    const handleRepo = async (repo: any) => {
+      if (repo.state.remotes.length > 0) {
+        await checkOriginPublic();
+      } else {
+        const stateDisposable = repo.state.onDidChange(async () => {
+          if (repo.state.remotes.length > 0) {
+            stateDisposable.dispose();
+            await checkOriginPublic();
+          }
+        });
+        context.subscriptions.push(stateDisposable);
+      }
+    };
+
+    // Register the listener first, then check if repos are already loaded,
+    // to avoid a race where onDidOpenRepository fires during the name prompt.
+    const disposable = api.onDidOpenRepository(async (repo: any) => {
+      disposable.dispose();
+      await handleRepo(repo);
+    });
+    context.subscriptions.push(disposable);
+
+    if (api.repositories.length > 0) {
+      disposable.dispose();
+      await handleRepo(api.repositories[0]);
+    }
   }
+
 
 
   // Initial checkpoint update and cleanup
@@ -298,6 +362,7 @@ export async function activate(context: vscode.ExtensionContext) {
     if (e.affectsConfiguration("lean-edits")) {
       const config = load_config();
       getController().updateConfig(config);
+      getController().renderStatusBar();
     }
   });
   context.subscriptions.push(configHook);
