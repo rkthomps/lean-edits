@@ -8,7 +8,11 @@ import https from "https";
 import * as vscode from "vscode";
 
 import assert from "assert";
-import { extensionLog } from "./common";
+import { extensionLog, waitUntilFocused, tryAcquireLock, releaseLock, waitForLockRelease } from "./common";
+
+const DECLINED_KEY = "changesGitignoreDeclined";
+const LOCK_KEY = "gitignoreLock";
+const RECOVERY_HINT = `You can change this anytime by running "LeanEdits: Hide .changes/ from search and git" from the command palette.`;
 import { getBaseCommit } from "./tracking";
 
 
@@ -139,29 +143,104 @@ export async function isOriginPublic(wsPath: string): Promise<boolean> {
 }
 
 
-/**
- * Add .changes to the global gitignore
- */
-export async function ignoreChanges(): Promise<void> {
+function gitignoreAlreadyHandled(): boolean {
+    const currentGitignore = getGlobalGitignorePath();
+    return (
+        currentGitignore !== undefined &&
+        gitIgnoreExists(currentGitignore) &&
+        gitIgnoreHasChangesEntry(currentGitignore)
+    );
+}
+
+async function appendToExistingGitignore(currentGitignore: string): Promise<void> {
+    await fs.promises.appendFile(currentGitignore, os.EOL + IGNORE_CHANGES + os.EOL, "utf-8");
+    extensionLog(`Added .changes to global gitignore at ${currentGitignore}`);
+}
+
+async function createDefaultGitignoreAndAdd(): Promise<void> {
+    const defaultPath = getDefaultGlobalGitignorePath();
+    await fs.promises.appendFile(defaultPath, os.EOL + IGNORE_CHANGES + os.EOL, "utf-8");
+    execSync(`git config --global core.excludesfile ${defaultPath}`);
+    extensionLog(`Created global gitignore at ${defaultPath} and added .changes to it`);
+}
+
+async function showDeclineRecoveryToast(): Promise<void> {
+    vscode.window.showInformationMessage(
+        `.changes/ will remain visible in git status. ${RECOVERY_HINT}`,
+        "Got it"
+    );
+}
+
+async function promptAndApplyGitignore(globalState: vscode.Memento): Promise<void> {
     const currentGitignore = getGlobalGitignorePath();
     if (currentGitignore !== undefined) {
-        if (gitIgnoreExists(currentGitignore) && gitIgnoreHasChangesEntry(currentGitignore)) {
-            extensionLog(`.changes already in global gitignore at ${currentGitignore}`);
-            return;
+        const add = await askUserToAddChangesToGitignore(currentGitignore);
+        if (add) {
+            await appendToExistingGitignore(currentGitignore);
+            await globalState.update(DECLINED_KEY, undefined);
         } else {
-            const add = await askUserToAddChangesToGitignore(currentGitignore);
-            if (add) {
-                await fs.promises.appendFile(currentGitignore, os.EOL + IGNORE_CHANGES + os.EOL, "utf-8");
-                extensionLog(`Added .changes to global gitignore at ${currentGitignore}`);
-            }
+            await globalState.update(DECLINED_KEY, true);
+            await showDeclineRecoveryToast();
         }
     } else {
         const createAndAdd = await askUserToCreateAndAddChangesToGitignore();
         if (createAndAdd) {
-            const defaultPath = getDefaultGlobalGitignorePath();
-            await fs.promises.appendFile(defaultPath, os.EOL + IGNORE_CHANGES + os.EOL, "utf-8");
-            execSync(`git config --global core.excludesfile ${defaultPath}`);
-            extensionLog(`Created global gitignore at ${defaultPath} and added .changes to it`);
+            await createDefaultGitignoreAndAdd();
+            await globalState.update(DECLINED_KEY, undefined);
+        } else {
+            await globalState.update(DECLINED_KEY, true);
+            await showDeclineRecoveryToast();
         }
+    }
+}
+
+async function applyGitignoreUnconditional(globalState: vscode.Memento): Promise<void> {
+    const currentGitignore = getGlobalGitignorePath();
+    if (currentGitignore !== undefined) {
+        await appendToExistingGitignore(currentGitignore);
+    } else {
+        await createDefaultGitignoreAndAdd();
+    }
+    await globalState.update(DECLINED_KEY, undefined);
+}
+
+/**
+ * Add .changes to the global gitignore
+ */
+export async function ignoreChanges(globalState: vscode.Memento, force: boolean = false): Promise<void> {
+    if (gitignoreAlreadyHandled()) {
+        const currentGitignore = getGlobalGitignorePath();
+        extensionLog(`.changes already in global gitignore at ${currentGitignore}`);
+        return;
+    }
+    if (force) {
+        await applyGitignoreUnconditional(globalState);
+        return;
+    }
+
+    while (true) {
+        if (gitignoreAlreadyHandled()) return;
+        if (globalState.get<boolean>(DECLINED_KEY)) {
+            extensionLog(`User previously declined adding .changes to global gitignore; skipping.`);
+            return;
+        }
+
+        await waitUntilFocused();
+        if (gitignoreAlreadyHandled()) return;
+        if (globalState.get<boolean>(DECLINED_KEY)) return;
+
+        if (await tryAcquireLock(globalState, LOCK_KEY)) {
+            try {
+                if (gitignoreAlreadyHandled()) return;
+                if (globalState.get<boolean>(DECLINED_KEY)) return;
+                await promptAndApplyGitignore(globalState);
+            } finally {
+                await releaseLock(globalState, LOCK_KEY);
+            }
+            return;
+        }
+
+        // Another window is prompting; wait for it to finish, then re-check.
+        await waitForLockRelease(globalState, LOCK_KEY);
     }
 }

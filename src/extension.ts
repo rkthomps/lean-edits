@@ -21,7 +21,9 @@ import { upload } from "./upload";
 
 import { LeanEditsConfig, load_config } from "./config";
 
-import { EXTENSION_NAME, CONSENT_URL, extensionLog } from "./common";
+import { EXTENSION_NAME, CONSENT_URL, extensionLog, waitUntilFocused, tryAcquireLock, releaseLock, waitForLockRelease } from "./common";
+
+const NAME_LOCK_KEY = "nameInputLock";
 import { readFileSync } from "fs";
 import { all } from "axios";
 
@@ -221,9 +223,21 @@ export async function activate(context: vscode.ExtensionContext) {
   });
   context.subscriptions.push(showConsentCommand);
 
-  // Ignore .changes directory in global gitignore and VSCode file search
-  ignoreChanges();
-  excludeChangesFromVscode();
+  // Ignore .changes directory in global gitignore and VSCode file search.
+  // Sequenced so the two prompts don't overlap; each waits for window focus
+  // and respects a permanent "declined" flag in globalState.
+  (async () => {
+    await ignoreChanges(context.globalState);
+    await excludeChangesFromVscode(context.globalState);
+  })();
+
+  // Recovery command for users who previously declined the .changes/ prompts.
+  const hideChangesCommand = vscode.commands.registerCommand(`${EXTENSION_NAME}.hideChanges`, async () => {
+    await ignoreChanges(context.globalState, true);
+    await excludeChangesFromVscode(context.globalState, true);
+    vscode.window.showInformationMessage(`.changes/ is now hidden from file search and git.`);
+  });
+  context.subscriptions.push(hideChangesCommand);
 
   // Toggle enabled/disabled command 
   const toggleEnabledCommand = vscode.commands.registerCommand(`${EXTENSION_NAME}.toggleEnabled`, async () => {
@@ -262,16 +276,38 @@ export async function activate(context: vscode.ExtensionContext) {
 
 
   // Show consent form & Ask for participant name if not set.
+  // Two-window safety: only the focused window prompts (waitUntilFocused),
+  // and only one window at a time runs the prompt (globalState lock).
   if (!controller.nameNonempty()) {
-    showConsentUrl();
-    const name = await askForName();
-    const config = vscode.workspace.getConfiguration(EXTENSION_NAME);
-    await config.update(
-      "participantName",
-      name,
-      vscode.ConfigurationTarget.Global
-    );
-    controller.updateConfig(load_config());
+    while (true) {
+      await waitUntilFocused();
+      controller.updateConfig(load_config());
+      if (controller.nameNonempty()) break;
+
+      if (await tryAcquireLock(context.globalState, NAME_LOCK_KEY)) {
+        try {
+          controller.updateConfig(load_config());
+          if (controller.nameNonempty()) break;
+          showConsentUrl();
+          const name = await askForName();
+          if ((name !== undefined) && (name.trim() !== "")) {
+            const config = vscode.workspace.getConfiguration(EXTENSION_NAME);
+            await config.update(
+              "participantName",
+              name,
+              vscode.ConfigurationTarget.Global
+            );
+            controller.updateConfig(load_config());
+          }
+        } finally {
+          await releaseLock(context.globalState, NAME_LOCK_KEY);
+        }
+        break;
+      }
+
+      // Another window is prompting; wait for it to finish, then re-check.
+      await waitForLockRelease(context.globalState, NAME_LOCK_KEY);
+    }
     controller.renderStatusBar();
   }
 
