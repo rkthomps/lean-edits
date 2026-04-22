@@ -55,6 +55,7 @@ Lack of Anonymity: Because the study seeks to relate edits and the GitHub commit
 
 **Possible Unknown Risks**: In addition, there might be risks that we cannot predict at this time. These unknown risks may be temporary, mild, and last only while you are actively participating in the research, or they may be serious, long-lasting, and may even cause death. You will be informed of any new findings that might affect your health or welfare, or might affect your willingness to continue in the research.
 
+
 ## Reporting Problems
 If you encounter a problem with the extension, please do not hesitate to reach out to Kyle Thompson at
 `r7thompson@ucsd.edu`.

@@ -34,6 +34,10 @@
       {
         "command": "lean-edits.syncCheckpoints",
         "title": "[LeanEdits]: Sync Checkpoints"
+      },
+      {
+        "command": "lean-edits.hideChanges",
+        "title": "[LeanEdits]: Hide .changes/ from search and git"
       }
     ],
     "configuration": {
