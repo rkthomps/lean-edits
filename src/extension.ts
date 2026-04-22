@@ -265,14 +265,16 @@ export async function activate(context: vscode.ExtensionContext) {
   if (!controller.nameNonempty()) {
     showConsentUrl();
     const name = await askForName();
-    const config = vscode.workspace.getConfiguration(EXTENSION_NAME);
-    await config.update(
-      "participantName",
-      name,
-      vscode.ConfigurationTarget.Global
-    );
-    controller.updateConfig(load_config());
-    controller.renderStatusBar();
+    if ((name !== undefined) && (name.trim() !== "")) {
+      const config = vscode.workspace.getConfiguration(EXTENSION_NAME);
+      await config.update(
+        "participantName",
+        name,
+        vscode.ConfigurationTarget.Global
+      );
+      controller.updateConfig(load_config());
+      controller.renderStatusBar();
+    }
   }
 
   // Check if repo is public, accounting for the Git extension loading repos asynchronously
