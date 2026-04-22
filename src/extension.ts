@@ -181,6 +181,18 @@ async function askForName(): Promise<string | undefined> {
   return name; // undefined if user cancels
 }
 
+async function waitUntilFocused(): Promise<void> {
+  if (vscode.window.state.focused) return;
+  await new Promise<void>(resolve => {
+    const sub = vscode.window.onDidChangeWindowState(s => {
+      if (s.focused) {
+        sub.dispose();
+        resolve();
+      }
+    });
+  });
+}
+
 let controller: LeanEditsController | undefined = undefined;
 
 
@@ -263,18 +275,26 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // Show consent form & Ask for participant name if not set.
   if (!controller.nameNonempty()) {
-    showConsentUrl();
-    const name = await askForName();
-    if ((name !== undefined) && (name.trim() !== "")) {
-      const config = vscode.workspace.getConfiguration(EXTENSION_NAME);
-      await config.update(
-        "participantName",
-        name,
-        vscode.ConfigurationTarget.Global
-      );
-      controller.updateConfig(load_config());
-      controller.renderStatusBar();
+    await waitUntilFocused();
+
+    // Refresh from disk — another window may have written the name while we waited.
+    controller.updateConfig(load_config());
+
+    if (!controller.nameNonempty()) {
+      showConsentUrl();
+      const name = await askForName();
+      if ((name !== undefined) && (name.trim() !== "")) {
+        const config = vscode.workspace.getConfiguration(EXTENSION_NAME);
+        await config.update(
+          "participantName",
+          name,
+          vscode.ConfigurationTarget.Global
+        );
+        controller.updateConfig(load_config());
+      }
     }
+
+    controller.renderStatusBar();
   }
 
   // Check if repo is public, accounting for the Git extension loading repos asynchronously
