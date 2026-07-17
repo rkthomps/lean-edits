@@ -31,7 +31,7 @@ Since the changes are uploaded to the cloud at regular intervals, **it is always
 For your convenience, the extension will prompt you to create a global `.gitignore_global` file to ignore this directory across your file system. 
 
 ### Enabling/Disabling LeanEdits 
-You can very easily enable/disable the extension by clicking on the "Lean Vacuum: ON/OFF" status bar item in the lower left-hand
+You can very easily enable/disable the extension by clicking on the "LeanEdits: ON/OFF" status bar item in the lower left-hand
 corner of your editor.
 
 ![Enable/Disable Extension](figures/click-enable.png)
